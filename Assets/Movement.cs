@@ -116,14 +116,16 @@ public class Movement : MonoBehaviour
         isCharging = false;
         canJump = false;
 
-        Vector2 jumpVector = Vector2.up * currentJumpForce;
+        // Ensure the jump vector is upwards initially
+        Vector2 jumpVector = new Vector2(0, currentJumpForce);
 
         if (jumpDirection != 0)
         {
             float horizontalForceMultiplier = 0.5f;
-            jumpVector += Vector2.right * jumpDirection * (currentJumpForce * horizontalForceMultiplier);
+            jumpVector.x = jumpDirection * (currentJumpForce * horizontalForceMultiplier);
         }
 
+        // Apply the jump vector as velocity
         rb.velocity = jumpVector;
 
         StartCoroutine(JumpCooldown());
@@ -141,14 +143,14 @@ public class Movement : MonoBehaviour
         // Move the character
         rb.velocity = new Vector2(moveInput * moveSpeed, rb.velocity.y);
 
-        // Flip the sprite based on the direction of movement
+        // Flip the sprite based on the direction of movement without changing the dimensions
         if (moveInput > 0) // Moving right
         {
-            transform.localScale = new Vector3(1, 1, 1);
+            transform.localScale = new Vector3(Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
         }
         else if (moveInput < 0) // Moving left
         {
-            transform.localScale = new Vector3(-1, 1, 1);
+            transform.localScale = new Vector3(-Mathf.Abs(transform.localScale.x), transform.localScale.y, transform.localScale.z);
         }
     }
 
@@ -184,6 +186,12 @@ public class Movement : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
+        // Detect if the player has landed on a ground layer surface
+        if (((1 << collision.gameObject.layer) & groundLayer) != 0)
+        {
+            ResetJumpState();
+        }
+
         if (collision.gameObject.CompareTag("SlipperySurface"))
         {
             onSlipperySurface = true;
