@@ -4,11 +4,20 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class DialogTrigger : MonoBehaviour
+[System.Serializable]
+public class DialogChoice
+{
+    public string choiceText; // The text for the choice
+    public string[] resultingDialogLines; // The dialog lines that follow this choice
+}
+
+public class Dialog : MonoBehaviour
 {
     public string[] dialogLines;
-    public GameObject dialogUI; // The UI element that holds the dialog text and background
+    public DialogChoice[] dialogChoices; // Array to store dialog choices
+    public GameObject dialogPanel; // The single UI panel that holds the dialog text, background, and choice buttons
     public TextMeshProUGUI dialogText; // The TMP Text component where the dialog will be displayed
+    public Button[] choiceButtons; // Buttons for each choice
     public float typingSpeed = 0.05f;
 
     private int currentLineIndex = 0;
@@ -18,8 +27,14 @@ public class DialogTrigger : MonoBehaviour
 
     private void Start()
     {
-        dialogUI.SetActive(false); // Ensure the dialog UI is hidden initially
-        Debug.Log("DialogTrigger script initialized. Dialog UI is hidden.");
+        dialogPanel.SetActive(false); // Ensure the dialog panel is hidden initially
+        Debug.Log("DialogTrigger script initialized. Dialog panel is hidden.");
+
+        // Ensure all choice buttons are initially disabled and hidden
+        foreach (Button button in choiceButtons)
+        {
+            button.gameObject.SetActive(false); // Hide the button
+        }
     }
 
     private void Update()
@@ -37,6 +52,11 @@ public class DialogTrigger : MonoBehaviour
             {
                 Debug.Log("Currently typing, completing the current line.");
                 CompleteLine();
+            }
+            else if (dialogChoices.Length > 0 && currentLineIndex >= dialogLines.Length)
+            {
+                Debug.Log("Displaying dialog choices.");
+                DisplayChoices();
             }
             else
             {
@@ -68,7 +88,7 @@ public class DialogTrigger : MonoBehaviour
     {
         isDialogActive = true;
         currentLineIndex = 0;
-        dialogUI.SetActive(true);
+        dialogPanel.SetActive(true); // Show the dialog panel
         FindObjectOfType<Movement>().enabled = false; // Disable player movement
         Debug.Log("Dialog started. Player movement disabled.");
         DisplayNextLine();
@@ -83,6 +103,11 @@ public class DialogTrigger : MonoBehaviour
             Debug.Log($"Displaying line {currentLineIndex + 1}/{dialogLines.Length}: {dialogLines[currentLineIndex]}");
             StartCoroutine(TypeLine(dialogLines[currentLineIndex]));
             currentLineIndex++;
+        }
+        else if (dialogChoices.Length > 0)
+        {
+            Debug.Log("All dialog lines displayed. Presenting choices.");
+            DisplayChoices();
         }
         else
         {
@@ -107,7 +132,6 @@ public class DialogTrigger : MonoBehaviour
         Debug.Log("Line typing complete.");
     }
 
-
     private void CompleteLine()
     {
         StopAllCoroutines();
@@ -116,13 +140,56 @@ public class DialogTrigger : MonoBehaviour
         Debug.Log("Line typing skipped. Displaying full line.");
     }
 
+    private void DisplayChoices()
+    {
+        Debug.Log("Dialog choices available.");
+
+        for (int i = 0; i < choiceButtons.Length; i++)
+        {
+            if (i < dialogChoices.Length)
+            {
+                choiceButtons[i].gameObject.SetActive(true); // Make the button visible
+                choiceButtons[i].GetComponentInChildren<TextMeshProUGUI>().text = dialogChoices[i].choiceText;
+                int choiceIndex = i; // Local copy of i for the closure
+                choiceButtons[i].onClick.RemoveAllListeners(); // Clear any existing listeners
+                choiceButtons[i].onClick.AddListener(() =>
+                {
+                    Debug.Log($"Button {choiceIndex + 1} pressed.");
+                    OnChoiceSelected(choiceIndex);
+                });
+            }
+            else
+            {
+                choiceButtons[i].gameObject.SetActive(false); // Hide unused buttons
+            }
+        }
+    }
+
+    private void OnChoiceSelected(int choiceIndex)
+    {
+        Debug.Log($"Choice {choiceIndex + 1} selected.");
+        dialogLines = dialogChoices[choiceIndex].resultingDialogLines;
+        currentLineIndex = 0;
+
+        // Hide the buttons after selection
+        foreach (Button button in choiceButtons)
+        {
+            button.gameObject.SetActive(false);
+        }
+        EndDialog();
+    }
     private void EndDialog()
     {
-        dialogUI.SetActive(false);
+        dialogPanel.SetActive(false); // Hide the dialog panel
         FindObjectOfType<Movement>().enabled = true; // Re-enable player movement
         isDialogActive = false;
         isPlayerInTrigger = false;
-        gameObject.SetActive(false); // Make the object disappear
-        Debug.Log("Dialog ended. Player movement enabled and dialog object deactivated.");
+        dialogText.text = "";
+
+        // Destroy the GameObject that this script is attached to
+        Destroy(gameObject);
+
+        Debug.Log("Dialog ended. Player movement enabled and dialog panel deactivated. GameObject destroyed.");
     }
 }
+
