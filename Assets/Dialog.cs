@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,7 +27,7 @@ public class Dialog : MonoBehaviour
     private void Start()
     {
         dialogPanel.SetActive(false); // Ensure the dialog panel is hidden initially
-        Debug.Log("DialogTrigger script initialized. Dialog panel is hidden.");
+        Debug.Log("Dialog script initialized. Dialog panel is hidden.");
 
         // Ensure all choice buttons are initially disabled and hidden
         foreach (Button button in choiceButtons)
@@ -168,6 +167,11 @@ public class Dialog : MonoBehaviour
     private void OnChoiceSelected(int choiceIndex)
     {
         Debug.Log($"Choice {choiceIndex + 1} selected.");
+
+        // Save the selected choice index using the DialogManager
+        DialogManager.instance.SaveChoice(choiceIndex);
+
+        // Update dialogLines based on the choice
         dialogLines = dialogChoices[choiceIndex].resultingDialogLines;
         currentLineIndex = 0;
 
@@ -176,8 +180,10 @@ public class Dialog : MonoBehaviour
         {
             button.gameObject.SetActive(false);
         }
+
         EndDialog();
     }
+
     private void EndDialog()
     {
         dialogPanel.SetActive(false); // Hide the dialog panel
@@ -187,9 +193,9 @@ public class Dialog : MonoBehaviour
         dialogText.text = "";
 
         // Destroy the GameObject that this script is attached to
+        Debug.Log("Dialog ended. Player movement enabled and dialog panel deactivated. GameObject destroyed.");
+
         Destroy(gameObject);
 
-        Debug.Log("Dialog ended. Player movement enabled and dialog panel deactivated. GameObject destroyed.");
     }
 }
-

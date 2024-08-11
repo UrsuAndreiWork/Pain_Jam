@@ -24,6 +24,10 @@ public class Movement : MonoBehaviour
 
     private bool onSlipperySurface = false;
 
+    private Vector2 lastPosition;
+    private float stuckTimer = 0f;
+    private float stuckThreshold = 4f;  // Time in seconds to consider player stuck
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -33,6 +37,8 @@ public class Movement : MonoBehaviour
         lineRenderer = GetComponent<LineRenderer>();
         lineRenderer.positionCount = trajectoryResolution;
         lineRenderer.enabled = false; // Hide the line renderer initially
+
+        lastPosition = transform.position;
     }
 
     void Update()
@@ -63,6 +69,9 @@ public class Movement : MonoBehaviour
                 HandleMovement();
             }
         }
+
+        // Check if the player is stuck
+        CheckIfStuck();
 
         // Reset charging if player touches the ground
         if (isGrounded && !isCharging)
@@ -212,5 +221,58 @@ public class Movement : MonoBehaviour
         jumpDirection = 0;
         currentJumpForce = 0f;
         lineRenderer.enabled = false;  // Hide the arc when on the ground
+    }
+
+    private void CheckIfStuck()
+    {
+        // If the player is not grounded and position hasn't changed significantly
+        if (!isGrounded && (Vector2.Distance(transform.position, lastPosition) < 0.01f))
+        {
+            stuckTimer += Time.deltaTime;
+
+            // If the player has been stuck for more than the threshold
+            if (stuckTimer >= stuckThreshold)
+            {
+                TeleportToClosestObject();
+                stuckTimer = 0f;  // Reset the stuck timer
+            }
+        }
+        else
+        {
+            stuckTimer = 0f;  // Reset the stuck timer if the player is moving or grounded
+        }
+
+        lastPosition = transform.position;
+    }
+
+    private void TeleportToClosestObject()
+    {
+        // Find all colliders in the scene
+        Collider2D[] allColliders = FindObjectsOfType<Collider2D>();
+        Collider2D closestCollider = null;
+        float closestDistance = Mathf.Infinity;
+
+        foreach (Collider2D collider in allColliders)
+        {
+            // Ignore the player's own collider
+            if (collider == boxCollider) continue;
+
+            // Calculate the distance to this collider
+            float distance = Vector2.Distance(transform.position, collider.bounds.center);
+
+            // Check if this is the closest one so far
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestCollider = collider;
+            }
+        }
+
+        if (closestCollider != null)
+        {
+            // Teleport the player to the top center of the closest object
+            Vector2 teleportPosition = new Vector2(closestCollider.bounds.center.x, closestCollider.bounds.max.y + boxCollider.bounds.extents.y);
+            transform.position = teleportPosition;
+        }
     }
 }
